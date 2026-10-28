@@ -1,0 +1,104 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+  <Frame
+    name="PointBlankSniperBuyFrameTemplate"
+    mixin="PointBlankSniperBuyFrameMixin"
+    enableMouse="true"
+    virtual="true"
+    hidden="true"
+  >
+    <Anchors>
+      <Anchor point="CENTER" y="20"/>
+    </Anchors>
+    <KeyValues>
+      <KeyValue key="layoutType" value="SimplePanelTemplate" type="string"/>
+    </KeyValues>
+    <Scripts>
+      <OnLoad method="OnLoad"/>
+      <OnEvent method="OnEvent"/>
+      <OnShow method="OnShow"/>
+      <OnHide method="OnHide"/>
+    </Scripts>
+    <Frames>
+      <Frame parentKey="Icon" inherits="PointBlankSniperItemIconTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" x="20" y="-40"/>
+          <Anchor point="RIGHT" x="-20"/>
+        </Anchors>
+      </Frame>
+    </Frames>
+    <Layers>
+      <Layer>
+        <FontString parentKey="Price" inherits="GameFontHighlightMedium">
+          <Anchors>
+            <Anchor point="TOPLEFT" x="40" y="-120" />
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Frames>
+      <Button name="PointBlankSniperRapidBuyButton" parentKey="BuyButton" inherits="UIPanelDynamicResizeButtonTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" x="40" y="-150" />
+          <Anchor point="RIGHT" x="-20" />
+        </Anchors>
+        <Scripts>
+          <OnClick>
+            self:GetParent():BuyNow()
+          </OnClick>
+        </Scripts>
+      </Button>
+      <Button parentKey="SkipButton" text="POINT_BLANK_SNIPER_L_SKIP_RESULT" inherits="UIPanelDynamicResizeButtonTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeKey="$parent.BuyButton" y="-10" />
+          <Anchor point="RIGHT" x="-20" />
+        </Anchors>
+        <Scripts><OnClick>self:GetParent():SkipResult()</OnClick></Scripts>
+      </Button>
+      <Button parentKey="NormalSearch" text="POINT_BLANK_SNIPER_L_BLIZZARD_BUY_UI" inherits="UIPanelDynamicResizeButtonTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeKey="$parent.SkipButton" y="-10" />
+          <Anchor point="RIGHT" x="-20" />
+        </Anchors>
+        <Scripts>
+          <OnClick>
+            self:GetParent():ViewAll()
+          </OnClick>
+        </Scripts>
+      </Button>
+      <Button parentKey="NameSearchButton" text="POINT_BLANK_SNIPER_L_NAME_SEARCH" inherits="UIPanelDynamicResizeButtonTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeKey="$parent.NormalSearch" y="-10" />
+          <Anchor point="RIGHT" x="-20" />
+        </Anchors>
+        <Scripts>
+          <OnClick>
+            self:GetParent():NameSearch()
+          </OnClick>
+        </Scripts>
+      </Button>
+    </Frames>
+    <Layers>
+      <Layer>
+        <FontString parentKey="SearchTerm" inherits="GameFontHighlight" wordwrap="false">
+          <Anchors>
+            <Anchor point="BOTTOMLEFT" x="40" y="60" />
+            <Anchor point="RIGHT" x="-10" />
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Frames>
+      <Button parentKey="RemoveSearchTermButton" text="POINT_BLANK_SNIPER_L_REMOVE_SEARCH_TERM" inherits="UIPanelDynamicResizeButtonTemplate">
+        <Anchors>
+          <Anchor point="BOTTOMLEFT" x="40" y="20" />
+          <Anchor point="RIGHT" x="-20" />
+        </Anchors>
+        <Scripts>
+          <OnClick>
+            self:GetParent():RemoveSearchTerm()
+          </OnClick>
+        </Scripts>
+      </Button>
+    </Frames>
+  </Frame>
+</Ui>

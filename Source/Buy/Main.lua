@@ -1,11 +1,32 @@
 local PURCHASE_ITEM_EVENTS = {
   "ITEM_SEARCH_RESULTS_UPDATED",
   "COMMODITY_SEARCH_RESULTS_UPDATED",
+  "COMMODITY_SEARCH_RESULTS_ADDED",
+  "AUCTION_HOUSE_THROTTLED_SYSTEM_READY",
   "COMMODITY_PRICE_UPDATED",
   "COMMODITY_PRICE_UNAVAILABLE",
+  "AUCTION_HOUSE_PURCHASE_COMPLETED",
+  "AUCTION_HOUSE_SHOW_ERROR",
 }
 
 PointBlankSniperBuyFrameMixin = {}
+
+local function ItemUnitPrice(result)
+  if not result or type(result.buyoutAmount) ~= "number" or type(result.quantity) ~= "number" or result.quantity <= 0 then return nil end
+  return result.buyoutAmount / result.quantity
+end
+
+local function FakeBuyEnabled()
+  return PointBlankSniper.Config.Get(PointBlankSniper.Config.Options.DEBUG_FAKE_BUY) == true
+end
+
+function PointBlankSniperBuyFrameMixin:DebugAction(message)
+  local itemID = self.expectedItemKey and self.expectedItemKey.itemID
+  if itemID then
+    local name = self.info and self.info.itemName or ("item:" .. itemID)
+    PointBlankSniper.Utilities.Message(message:format(name, itemID))
+  end
+end
 
 function PointBlankSniperBuyFrameMixin:OnLoad()
   Auctionator.EventBus:Register(self, {
@@ -15,7 +36,28 @@ function PointBlankSniperBuyFrameMixin:OnLoad()
   Auctionator.EventBus:RegisterSource(self, "PointBlankSniperBuyFrameMixin")
 end
 
+function PointBlankSniperBuyFrameMixin:ApplyRapidBinding()
+  if InCombatLockdown() then return end
+  ClearOverrideBindings(self)
+  local buyKey = PointBlankSniper.Config.Get(PointBlankSniper.Config.Options.RAPID_BUY_KEY)
+  local skipKey = PointBlankSniper.Config.Get(PointBlankSniper.Config.Options.RAPID_SKIP_KEY)
+  if self:IsShown() then
+    if buyKey and buyKey ~= "" then
+      SetOverrideBindingClick(self, false, buyKey, "PointBlankSniperRapidBuyButton", "LeftButton")
+    end
+    if skipKey and skipKey ~= "" and skipKey ~= buyKey then
+      SetOverrideBindingClick(self, false, skipKey, "PointBlankSniperRapidSkipButton", "LeftButton")
+    end
+  end
+end
+
+function PointBlankSniperBuyFrameMixin:OnShow()
+  self:ApplyRapidBinding()
+end
+
 function PointBlankSniperBuyFrameMixin:OnHide()
+  self.generation = (self.generation or 0) + 1
+  if not InCombatLockdown() then ClearOverrideBindings(self) end
   FrameUtil.UnregisterFrameForEvents(self, PURCHASE_ITEM_EVENTS)
 
   if self.buyCommodity then
@@ -33,13 +75,74 @@ function PointBlankSniperBuyFrameMixin:Reset()
   self.resultInfo = nil
   self.ghostCount = nil
   self.buyCommodity = false
+  self.pendingAuctionID = nil
+  self.commodityPlan = nil
+  self.commodityPagePending = false
+  self.waitingForCommodityPage = false
+  self:UpdateBuyState()
+end
+
+function PointBlankSniperBuyFrameMixin:RequestCommodityPage()
+  if self.waitingForCommodityPage and not self.commodityPagePending and self.expectedItemKey and C_AuctionHouse.IsThrottledMessageSystemReady() then
+    self.commodityPagePending = true
+    C_AuctionHouse.RequestMoreCommoditySearchResults(self.expectedItemKey.itemID)
+  end
+end
+
+function PointBlankSniperBuyFrameMixin:PrepareFlippingCommodities(itemID)
+  self.commodityPlan = nil
+  self.gotResult = false
+  if not C_AuctionHouse.HasFullCommoditySearchResults(itemID) then
+    self.waitingForCommodityPage = true
+    self.Price:SetText(POINT_BLANK_SNIPER_L_FLIPPING_INCOMPLETE)
+    self:UpdateBuyState()
+    self:RequestCommodityPage()
+    return
+  end
+  self.waitingForCommodityPage = false
+  local ok, _, maximum = PointBlankSniper.PriceCheck.Flipping.Evaluate(self.expectedItemKey, nil, self.flippingManualMax, true)
+  local tiers = {}
+  if ok then
+    for index = 1, C_AuctionHouse.GetNumCommoditySearchResults(itemID) do
+      local tier = C_AuctionHouse.GetCommoditySearchResultInfo(itemID, index)
+      if not tier then ok = false break end
+      table.insert(tiers, tier)
+    end
+  end
+  if ok then
+    self.commodityPlan = PointBlankSniper.PriceCheck.Flipping.PlanCommodities(tiers, maximum)
+  end
+  self.gotResult = true
+  local plan = self.commodityPlan
+  self.Price:SetText(plan and POINT_BLANK_SNIPER_L_FLIPPING_PREPARED:format(plan.quantity, GetMoneyString(plan.total, true)) or POINT_BLANK_SNIPER_L_FLIPPING_COMMODITY_UNTESTED)
   self:UpdateBuyState()
 end
 
 function PointBlankSniperBuyFrameMixin:OnEvent(eventName, ...)
-  if eventName == "COMMODITY_SEARCH_RESULTS_UPDATED" then
+  if eventName == "AUCTION_HOUSE_PURCHASE_COMPLETED" then
+    local auctionID = ...
+    if self.pendingAuctionID and self.pendingAuctionID == auctionID then
+      self.pendingAuctionID = nil
+      self:GetParent():AdvancePurchased(self.expectedItemKey)
+    end
+  elseif eventName == "AUCTION_HOUSE_SHOW_ERROR" and self.pendingAuctionID then
+    self.pendingAuctionID = nil
+    self.gotResult = false
+    self.BuyButton:Disable()
+    self.BuyButton:SetText(POINT_BLANK_SNIPER_L_RAPID_ERROR)
+    DynamicResizeButton_Resize(self.BuyButton)
+  elseif eventName == "AUCTION_HOUSE_THROTTLED_SYSTEM_READY" then
+    self:RequestCommodityPage()
+  elseif eventName == "COMMODITY_SEARCH_RESULTS_UPDATED" or eventName == "COMMODITY_SEARCH_RESULTS_ADDED" then
     local itemID = ...
-    if itemID ~= self.expectedItemKey.itemID then
+    if not self.expectedItemKey or itemID ~= self.expectedItemKey.itemID then
+      return
+    end
+    if PointBlankSniper.PriceCheck.Flipping.Enabled() then
+      self.commodityPagePending = false
+      self:PrepareFlippingCommodities(itemID)
+      return
+    elseif eventName == "COMMODITY_SEARCH_RESULTS_ADDED" then
       return
     end
     self.gotResult = true
@@ -68,6 +171,7 @@ function PointBlankSniperBuyFrameMixin:OnEvent(eventName, ...)
 
   elseif eventName == "ITEM_SEARCH_RESULTS_UPDATED" then
     local itemKey = ...
+    if self.pendingAuctionID or not self.expectedItemKey then return end
     if Auctionator.Utilities.ItemKeyString(itemKey) ~=
         Auctionator.Utilities.ItemKeyString(self.expectedItemKey) then
       return
@@ -79,13 +183,22 @@ function PointBlankSniperBuyFrameMixin:OnEvent(eventName, ...)
       self.resultInfo = C_AuctionHouse.GetItemSearchResultInfo(itemKey, 1)
 
       local displayPrice = self.resultInfo.buyoutAmount or 0
-      self.Price:SetText(POINT_BLANK_SNIPER_L_PRICE_COLON_X:format(GetMoneyString(displayPrice, true)))
+      local unitPrice = ItemUnitPrice(self.resultInfo)
+      if PointBlankSniper.PriceCheck.Flipping.Enabled() and unitPrice and self.resultInfo.quantity > 1 then
+        self.Price:SetText(POINT_BLANK_SNIPER_L_FLIPPING_ITEM_TOTAL:format(GetMoneyString(displayPrice, true), self.resultInfo.quantity))
+      else
+        self.Price:SetText(POINT_BLANK_SNIPER_L_PRICE_COLON_X:format(GetMoneyString(displayPrice, true)))
+      end
     end
     self:UpdateBuyState()
 
   elseif eventName == "COMMODITY_PRICE_UPDATED" and self.buyCommodity then
     local unitPrice, totalPrice = ...
-    if self.ghostCount or (unitPrice <= self.resultInfo.unitPrice and self.resultInfo.unitPrice <= self.expectedPrice) then
+    local valid = not FakeBuyEnabled() and self.resultInfo and type(unitPrice) == "number" and type(totalPrice) == "number" and totalPrice > 0 and totalPrice <= GetMoney()
+    if valid and PointBlankSniper.PriceCheck.Flipping.Enabled() then
+      valid = PointBlankSniper.PriceCheck.Flipping.Evaluate(self.expectedItemKey, unitPrice, self.flippingManualMax, true)
+    end
+    if valid and (self.ghostCount or (unitPrice <= self.resultInfo.unitPrice and self.resultInfo.unitPrice <= self.expectedPrice)) then
       C_AuctionHouse.ConfirmCommoditiesPurchase(self.expectedItemKey.itemID, self.ghostCount or self.resultInfo.quantity)
     else
       C_AuctionHouse.CancelCommoditiesPurchase()
@@ -106,6 +219,18 @@ function PointBlankSniperBuyFrameMixin:OnEvent(eventName, ...)
 end
 
 function PointBlankSniperBuyFrameMixin:UpdateBuyState()
+  if self.pendingAuctionID then
+    self.BuyButton:Disable()
+    self.BuyButton:SetText(POINT_BLANK_SNIPER_L_BUYING)
+    return
+  end
+  if self.gotResult and self.info and self.info.isCommodity and PointBlankSniper.PriceCheck.Flipping.Enabled() then
+    local plan = self.commodityPlan
+    self.BuyButton:SetEnabled(FakeBuyEnabled() and plan and plan.quantity > 0)
+    self.BuyButton:SetText(FakeBuyEnabled() and POINT_BLANK_SNIPER_L_DEBUG_BUY_BUTTON or POINT_BLANK_SNIPER_L_FLIPPING_COMMODITY_UNTESTED)
+    DynamicResizeButton_Resize(self.BuyButton)
+    return
+  end
   if not self.gotResult then
     self.BuyButton:Disable()
     self.BuyButton:SetText(POINT_BLANK_SNIPER_L_WAITING)
@@ -114,11 +239,23 @@ function PointBlankSniperBuyFrameMixin:UpdateBuyState()
     if self.info.isCommodity then
       self.BuyButton:SetEnabled(self.ghostCount or (self.resultInfo and self.resultInfo.quantity > 0 and self.resultInfo.unitPrice <= self.expectedPrice))
     else
-      self.BuyButton:SetEnabled(self.resultInfo and self.resultInfo.buyoutAmount ~= nil and self.resultInfo.buyoutAmount <= self.expectedPrice)
+      local price
+      if PointBlankSniper.PriceCheck.Flipping.Enabled() then
+        price = ItemUnitPrice(self.resultInfo)
+      else
+        price = self.resultInfo and self.resultInfo.buyoutAmount
+      end
+      self.BuyButton:SetEnabled(price and price <= self.expectedPrice)
+    end
+
+    if self.BuyButton:IsEnabled() and PointBlankSniper.PriceCheck.Flipping.Enabled() then
+      local price = self.info.isCommodity and self.resultInfo.unitPrice or ItemUnitPrice(self.resultInfo)
+      local ok = PointBlankSniper.PriceCheck.Flipping.Evaluate(self.expectedItemKey, price, self.flippingManualMax, true)
+      self.BuyButton:SetEnabled(ok)
     end
 
     if self.BuyButton:IsEnabled() then
-      self.BuyButton:SetText(POINT_BLANK_SNIPER_L_BUY_NOW)
+      self.BuyButton:SetText(FakeBuyEnabled() and POINT_BLANK_SNIPER_L_DEBUG_BUY_BUTTON or POINT_BLANK_SNIPER_L_BUY_NOW)
     elseif not self.info.isCommodity and self.resultInfo and self.resultInfo.bidAmount ~= nil and self.resultInfo.buyoutAmount == nil then
       self.BuyButton:SetText(POINT_BLANK_SNIPER_L_BID_ONLY)
     else
@@ -129,15 +266,49 @@ function PointBlankSniperBuyFrameMixin:UpdateBuyState()
 end
 
 function PointBlankSniperBuyFrameMixin:BuyNow()
-  assert(self.BuyButton:IsEnabled())
+  if self.pendingAuctionID or self.buyCommodity or not self:IsShown() or not self.BuyButton:IsEnabled() or not self.info or not self.expectedItemKey then return end
+  if FakeBuyEnabled() then
+    local flipping = PointBlankSniper.PriceCheck.Flipping.Enabled()
+    if self.info.isCommodity and flipping then
+      local plan = self.commodityPlan
+      if not plan or plan.quantity <= 0 or not PointBlankSniper.PriceCheck.Flipping.Evaluate(self.expectedItemKey, plan.maxUnitPrice, self.flippingManualMax, true) then return end
+    else
+      if not self.resultInfo then return end
+      if flipping then
+        local price = self.info.isCommodity and self.resultInfo.unitPrice or ItemUnitPrice(self.resultInfo)
+        if not price or price > self.expectedPrice or not PointBlankSniper.PriceCheck.Flipping.Evaluate(self.expectedItemKey, price, self.flippingManualMax, true) then return end
+      end
+    end
+    self.BuyButton:Disable()
+    self:DebugAction(POINT_BLANK_SNIPER_L_DEBUG_BUY_MESSAGE)
+    self:GetParent():AdvancePurchased(self.expectedItemKey)
+    return
+  end
+  if not self.resultInfo then return end
+  if PointBlankSniper.PriceCheck.Flipping.Enabled() then
+    local price = self.info.isCommodity and self.resultInfo.unitPrice or ItemUnitPrice(self.resultInfo)
+    local total = self.info.isCommodity and price or self.resultInfo.buyoutAmount
+    if not price or not total or total > GetMoney() or price > self.expectedPrice or not PointBlankSniper.PriceCheck.Flipping.Evaluate(self.expectedItemKey, price, self.flippingManualMax, true) then
+      self.BuyButton:Disable()
+      return
+    end
+  end
+  self.BuyButton:Disable()
+  self.BuyButton:SetText(POINT_BLANK_SNIPER_L_BUYING)
   if self.info.isCommodity then
     self.buyCommodity = true
     C_AuctionHouse.StartCommoditiesPurchase(self.expectedItemKey.itemID, self.ghostCount or self.resultInfo.quantity)
   else
+    if not self.resultInfo.auctionID then return end
+    self.pendingAuctionID = self.resultInfo.auctionID
     C_AuctionHouse.PlaceBid(self.resultInfo.auctionID, self.resultInfo.buyoutAmount)
   end
-  self.BuyButton:Disable()
-  self.BuyButton:SetText(POINT_BLANK_SNIPER_L_BUYING)
+end
+
+function PointBlankSniperBuyFrameMixin:SkipResult()
+  if self.pendingAuctionID or self.buyCommodity or not self.expectedItemKey then return end
+  if FakeBuyEnabled() then self:DebugAction(POINT_BLANK_SNIPER_L_DEBUG_SKIP_MESSAGE) end
+  self:GetParent():AdvancePurchased(self.expectedItemKey)
 end
 
 function PointBlankSniperBuyFrameMixin:ViewAll()
@@ -202,6 +373,7 @@ end
 
 function PointBlankSniperBuyFrameMixin:ReceiveEvent(eventName, ...)
   if eventName == PointBlankSniper.Events.OpenBuyView then
+    if self.pendingAuctionID or self.buyCommodity then return end
     local details = ...
 
     self:Show()
@@ -211,8 +383,11 @@ function PointBlankSniperBuyFrameMixin:ReceiveEvent(eventName, ...)
       self.buyCommodity = false
     end
     self:Reset()
+    self.generation = (self.generation or 0) + 1
+    local generation = self.generation
 
     self.expectedPrice = details.price
+    self.flippingManualMax = details.flippingManualMax
     self.expectedItemKey = details.itemKey
     self.summaryResultsCount = details.quantity
     self.SearchTerm:SetText(details.rawSearchTermInfo and Auctionator.Search.PrettifySearchString(details.rawSearchTermInfo.searchTerm))
@@ -222,6 +397,7 @@ function PointBlankSniperBuyFrameMixin:ReceiveEvent(eventName, ...)
     self:UpdateSearchTermButtons()
 
     Auctionator.AH.GetItemKeyInfo(details.itemKey, function(itemKeyInfo)
+      if generation ~= self.generation or not self:IsShown() then return end
       self.info = itemKeyInfo
 
       self.Icon:Set(details.itemKey, itemKeyInfo.itemName, itemKeyInfo.iconFileID, itemKeyInfo.quality, itemKeyInfo.battlePetLink)

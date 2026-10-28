@@ -1,0 +1,17 @@
+<Ui>
+  <Frame name="PointBlankSniperListScannerNameCacheTemplate" virtual="true" mixin="PointBlankSniperListScannerNameCacheMixin">
+    <Scripts>
+      <OnLoad method="OnLoad"/>
+      <OnHide method="OnHide"/>
+      <OnEvent method="OnEvent"/>
+    </Scripts>
+  </Frame>
+
+  <Frame name="PointBlankSniperListScannerKeyCacheTemplate" virtual="true" mixin="PointBlankSniperListScannerKeyCacheMixin">
+    <Scripts>
+      <OnLoad method="OnLoad"/>
+      <OnHide method="OnHide"/>
+      <OnEvent method="OnEvent"/>
+    </Scripts>
+  </Frame>
+</Ui>

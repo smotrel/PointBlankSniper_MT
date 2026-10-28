@@ -1,0 +1,11 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+  <Script file="Alert.lua" />
+  <Script file="Main.lua" />
+  <Script file="DataProvider.lua" />
+  <Script file="Register.lua" />
+
+  <Script file="ResultsRow.lua" />
+  <Include file="ResultsRow.xml"/>
+
+  <Include file="Main.xml"/>
+</Ui>

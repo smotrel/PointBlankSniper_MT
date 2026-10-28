@@ -31,6 +31,33 @@ local SNIPE_RESULTS_TABLE_LAYOUT = {
     width = 80,
     defaultHide = true,
   },
+  {
+    headerTemplate = "AuctionatorStringColumnHeaderTemplate",
+    headerParameters = { "regionSaleAvgText" },
+    headerText = POINT_BLANK_SNIPER_L_FLIPPING_REGION_PRICE,
+    cellTemplate = "AuctionatorStringCellTemplate",
+    cellParameters = { "regionSaleAvgText" },
+    width = 140,
+    defaultHide = true,
+  },
+  {
+    headerTemplate = "AuctionatorStringColumnHeaderTemplate",
+    headerParameters = { "regionSoldText" },
+    headerText = POINT_BLANK_SNIPER_L_FLIPPING_REGION_SOLD,
+    cellTemplate = "AuctionatorStringCellTemplate",
+    cellParameters = { "regionSoldText" },
+    width = 120,
+    defaultHide = true,
+  },
+  {
+    headerTemplate = "AuctionatorStringColumnHeaderTemplate",
+    headerParameters = { "regionPercentText" },
+    headerText = POINT_BLANK_SNIPER_L_FLIPPING_REGION_PERCENT,
+    cellTemplate = "AuctionatorStringCellTemplate",
+    cellParameters = { "regionPercentText" },
+    width = 140,
+    defaultHide = true,
+  },
 }
 
 PointBlankSniperDataProviderMixin = CreateFromMixins(AuctionatorDataProviderMixin, AuctionatorItemKeyLoadingMixin)
@@ -73,6 +100,9 @@ function PointBlankSniperDataProviderMixin:ProcessThisScan(results, lastBatch)
     local isNew = not self.lastRound[key]
     r.highlight = isNew and showHighlights
     r.isNew = isNew and AUCTIONATOR_L_UNDERCUT_YES or AUCTIONATOR_L_UNDERCUT_NO
+    r.regionSaleAvgText = r.regionSaleAvg and GetMoneyString(r.regionSaleAvg, true) or "-"
+    r.regionSoldText = r.regionSoldPerDay and string.format("%.3f", r.regionSoldPerDay) or "-"
+    r.regionPercentText = r.regionPricePercent and string.format("%.2f%%", r.regionPricePercent) or "-"
   end
   self:AppendEntries(newResults, lastBatch)
 end
@@ -103,11 +133,24 @@ end
 
 local COMPARATORS = {
   minPrice = Auctionator.Utilities.NumberComparator,
+  comparisonPrice = Auctionator.Utilities.NumberComparator,
   name = Auctionator.Utilities.StringComparator,
   isNew = Auctionator.Utilities.StringComparator,
 }
 
 function PointBlankSniperDataProviderMixin:Sort(fieldName, sortDirection)
+  local numericFields = {regionSaleAvgText = "regionSaleAvg", regionSoldText = "regionSoldPerDay", regionPercentText = "regionPricePercent"}
+  if numericFields[fieldName] then
+    local field = numericFields[fieldName]
+    local direction = Auctionator.Utilities.NumberComparator(sortDirection, field)
+    table.sort(self.results, function(left, right)
+      if left[field] == nil then return false end
+      if right[field] == nil then return true end
+      return direction(left, right)
+    end)
+    self:SetDirty()
+    return
+  end
   local comparator = COMPARATORS[fieldName](sortDirection, fieldName)
 
   table.sort(self.results, function(left, right)

@@ -18,6 +18,32 @@
       <OnHide method="OnHide"/>
     </Scripts>
     <Frames>
+      <CheckButton parentKey="RapidFlipping" inherits="UICheckButtonTemplate">
+        <Size x="24" y="24"/><Anchors><Anchor point="TOPLEFT" x="20" y="-125"/></Anchors>
+        <Scripts><OnClick>self:GetParent():SaveFlippingControls()</OnClick></Scripts>
+      </CheckButton>
+      <EditBox parentKey="RapidSold" inherits="InputBoxTemplate" autoFocus="false">
+        <Size x="55" y="20"/><Anchors><Anchor point="TOPLEFT" x="265" y="-128"/></Anchors>
+        <Scripts><OnEnterPressed>self:ClearFocus()</OnEnterPressed><OnEscapePressed>self:GetParent():RefreshFlippingControls(); self:ClearFocus()</OnEscapePressed><OnEditFocusLost>self:GetParent():SaveFlippingControls()</OnEditFocusLost></Scripts>
+      </EditBox>
+      <EditBox parentKey="RapidSpend" inherits="InputBoxTemplate" autoFocus="false">
+        <Size x="68" y="20"/><Anchors><Anchor point="TOPLEFT" x="385" y="-128"/></Anchors>
+        <Scripts><OnEnterPressed>self:ClearFocus()</OnEnterPressed><OnEscapePressed>self:GetParent():RefreshFlippingControls(); self:ClearFocus()</OnEscapePressed><OnEditFocusLost>self:GetParent():SaveFlippingControls()</OnEditFocusLost></Scripts>
+      </EditBox>
+      <Frame parentKey="RapidKey" mixin="PointBlankSniperRapidKeyMixin">
+        <Size x="180" y="20"/><Anchors><Anchor point="TOPLEFT" x="490" y="-80"/></Anchors>
+        <KeyValues><KeyValue key="labelText" value="" type="string"/><KeyValue key="bindingOption" value="RAPID_BUY_KEY" type="string"/></KeyValues>
+        <Layers><Layer><FontString parentKey="Description" inherits="GameFontHighlight" hidden="true"/></Layer></Layers>
+        <Frames><Button parentKey="Button" inherits="AuctionatorKeyBindingButtonTemplate"><Anchors><Anchor point="CENTER"/></Anchors></Button></Frames>
+        <Scripts><OnLoad method="OnLoad"/><OnHide method="OnHide"/><OnMouseDown method="OnClick"/><OnEnter method="OnEnter"/><OnLeave method="OnLeave"/></Scripts>
+      </Frame>
+      <Frame parentKey="RapidSkipKey" mixin="PointBlankSniperRapidKeyMixin">
+        <Size x="180" y="20"/><Anchors><Anchor point="LEFT" relativeKey="$parent.RapidKey" relativePoint="RIGHT" x="65"/></Anchors>
+        <KeyValues><KeyValue key="labelText" value="" type="string"/><KeyValue key="bindingOption" value="RAPID_SKIP_KEY" type="string"/></KeyValues>
+        <Layers><Layer><FontString parentKey="Description" inherits="GameFontHighlight" hidden="true"/></Layer></Layers>
+        <Frames><Button parentKey="Button" inherits="AuctionatorKeyBindingButtonTemplate"><Anchors><Anchor point="CENTER"/></Anchors></Button></Frames>
+        <Scripts><OnLoad method="OnLoad"/><OnHide method="OnHide"/><OnMouseDown method="OnClick"/><OnEnter method="OnEnter"/><OnLeave method="OnLeave"/></Scripts>
+      </Frame>
       <Frame parentKey="ScannerNameCache" inherits="PointBlankSniperListScannerNameCacheTemplate"/>
       <Frame parentKey="ScannerKeyCache" inherits="PointBlankSniperListScannerKeyCacheTemplate"/>
 
@@ -94,14 +120,15 @@
       </Layer>
     </Layers>
     <Frames>
-      <EditBox autoFocus="false" numeric="true" inherits="InputBoxTemplate" parentKey="Percentage">
+      <EditBox autoFocus="false" inherits="InputBoxTemplate" parentKey="Percentage">
         <Size x="70" y="20" />
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeKey="$parent.PercentageLabel" x="10" y="4"/>
         </Anchors>
         <Scripts>
-          <OnEscapePressed>self:ClearFocus()</OnEscapePressed>
-          <OnEnterPressed>Auctionator.Components.ReportEnterPressed()</OnEnterPressed>
+          <OnEscapePressed>self:GetParent():RefreshPercentage(); self:ClearFocus()</OnEscapePressed>
+          <OnEnterPressed>self:ClearFocus()</OnEnterPressed>
+          <OnEditFocusLost>self:GetParent():SavePercentage()</OnEditFocusLost>
         </Scripts>
       </EditBox>
     </Frames>
@@ -179,7 +206,7 @@
       </Frame>
       <Frame parentKey="ResultsListing" inherits="AuctionatorResultsListingTemplate">
         <Anchors>
-          <Anchor point="TOPLEFT" x="20" y="-110"/>
+          <Anchor point="TOPLEFT" x="20" y="-185"/>
           <Anchor point="BOTTOMRIGHT" x="-320" y="27"/>
         </Anchors>
       </Frame>
@@ -199,6 +226,11 @@
     </Frames>
     <Layers>
       <Layer level="BACKGROUND">
+        <FontString parentKey="RapidFlippingLabel" inherits="GameFontHighlightSmall"><Anchors><Anchor point="LEFT" relativeKey="$parent.RapidFlipping" relativePoint="RIGHT"/></Anchors></FontString>
+        <FontString inherits="GameFontHighlightSmall" text="POINT_BLANK_SNIPER_L_RAPID_SOLD"><Anchors><Anchor point="BOTTOMLEFT" relativeKey="$parent.RapidSold" relativePoint="TOPLEFT" y="1"/></Anchors></FontString>
+        <FontString inherits="GameFontHighlightSmall" text="POINT_BLANK_SNIPER_L_RAPID_SPEND"><Anchors><Anchor point="BOTTOMLEFT" relativeKey="$parent.RapidSpend" relativePoint="TOPLEFT" y="1"/></Anchors></FontString>
+        <FontString inherits="GameFontHighlightSmall" text="POINT_BLANK_SNIPER_L_RAPID_BINDING"><Anchors><Anchor point="RIGHT" relativeKey="$parent.RapidKey" relativePoint="LEFT" x="-8"/></Anchors></FontString>
+        <FontString inherits="GameFontHighlightSmall" text="POINT_BLANK_SNIPER_L_RAPID_SKIP_BINDING"><Anchors><Anchor point="RIGHT" relativeKey="$parent.RapidSkipKey" relativePoint="LEFT" x="-8"/></Anchors></FontString>
         <FontString parentKey="Status" inherits="GameFontHighlight">
           <Anchors>
             <Anchor point="TOP" relativePoint="BOTTOM" relativeKey="$parent.ResultsListing" y="-4"/>

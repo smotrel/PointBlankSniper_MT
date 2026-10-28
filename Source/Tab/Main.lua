@@ -1,3 +1,37 @@
+PointBlankSniperRapidKeyMixin = CreateFromMixins(AuctionatorKeyBindingConfigMixin)
+
+function PointBlankSniperRapidKeyMixin:StartListening()
+  local tab = self:GetParent()
+  local buy = tab.Buy
+  if buy.pendingAuctionID or buy.buyCommodity or InCombatLockdown() then return end
+  local other = self == tab.RapidKey and tab.RapidSkipKey or tab.RapidKey
+  if other and other.isListening then other:StopListening() end
+  if buy:IsShown() then ClearOverrideBindings(buy) end
+  AuctionatorKeyBindingConfigMixin.StartListening(self)
+end
+
+function PointBlankSniperRapidKeyMixin:SetShortcut(shortcut)
+  if self.isListening then
+    local options = PointBlankSniper.Config.Options
+    local currentOption = options[self.bindingOption]
+    local otherOption = self.bindingOption == "RAPID_SKIP_KEY" and options.RAPID_BUY_KEY or options.RAPID_SKIP_KEY
+    if shortcut ~= "" and shortcut == PointBlankSniper.Config.Get(otherOption) then
+      AuctionatorKeyBindingConfigMixin.SetShortcut(self, PointBlankSniper.Config.Get(currentOption))
+      PointBlankSniper.Utilities.Message(POINT_BLANK_SNIPER_L_RAPID_KEY_CONFLICT)
+      return
+    end
+    PointBlankSniper.Config.Set(currentOption, shortcut)
+  end
+  AuctionatorKeyBindingConfigMixin.SetShortcut(self, shortcut)
+end
+
+function PointBlankSniperRapidKeyMixin:StopListening()
+  local wasListening = self.isListening
+  AuctionatorKeyBindingConfigMixin.StopListening(self)
+  local buy = self:GetParent().Buy
+  if wasListening and buy and buy:IsShown() then buy:ApplyRapidBinding() end
+end
+
 PointBlankSniperTabFrameMixin = {}
 
 function PointBlankSniperTabFrameMixin:OnLoad()
@@ -107,6 +141,11 @@ local function ChangeCheck(config, newValue)
   return false
 end
 
+local function FlippingSignature()
+  local options = PointBlankSniper.Config.Options
+  return tostring(PointBlankSniper.Config.Get(options.FLIPPING)) .. ":" .. tostring(PointBlankSniper.Config.Get(options.FLIPPING_PERCENT)) .. ":" .. tostring(PointBlankSniper.Config.Get(options.FLIPPING_DAILY_SOLD)) .. ":" .. tostring(PointBlankSniper.Config.Get(options.FLIPPING_MAX_SPEND))
+end
+
 function PointBlankSniperTabFrameMixin:UpdateConfigs()
   if ChangeCheck(PointBlankSniper.Config.Options.CURRENT_LIST, self.ListName:GetValue()) then
     self:Stop()
@@ -118,7 +157,7 @@ function PointBlankSniperTabFrameMixin:UpdateConfigs()
   end
 
   local percentage = tonumber(self.Percentage:GetText())
-  if percentage ~= nil and percentage >= 0 and ChangeCheck(PointBlankSniper.Config.Options.PERCENTAGE, percentage / 100) then
+  if not PointBlankSniper.Config.Get(PointBlankSniper.Config.Options.FLIPPING) and not self.Percentage:HasFocus() and percentage ~= nil and percentage >= 0 and ChangeCheck(PointBlankSniper.Config.Options.PERCENTAGE, percentage / 100) then
     self:Stop()
   end
 
@@ -132,6 +171,13 @@ function PointBlankSniperTabFrameMixin:UpdateConfigs()
 end
 
 function PointBlankSniperTabFrameMixin:OnShow()
+  -- Companion versions that dock the listing still use the upstream -110
+  -- offset. Restore room for this fork's controls when the tab is shown.
+  self.ResultsListing:ClearAllPoints()
+  self.ResultsListing:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -185)
+  self.ResultsListing:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -320, 27)
+  self:RefreshFlippingControls()
+  self.flippingSignature = FlippingSignature()
   self:UpdateShoppingListNames()
   if PointBlankSniper.Config.Get(PointBlankSniper.Config.Options.KEYS_SEARCH) then
     Auctionator.EventBus:Fire(self, PointBlankSniper.Events.SetupKeysSearch)
@@ -140,6 +186,93 @@ function PointBlankSniperTabFrameMixin:OnShow()
   if self.StartButton:IsEnabled() then
     self:Start()
   end
+end
+
+function PointBlankSniperTabFrameMixin:RefreshFlippingControls()
+  local config, options = PointBlankSniper.Config, PointBlankSniper.Config.Options
+  self.RapidFlipping:SetChecked(config.Get(options.FLIPPING))
+  self.RapidFlippingLabel:SetText(config.Get(options.FLIPPING) and POINT_BLANK_SNIPER_L_RAPID_FLIPPING_ON or POINT_BLANK_SNIPER_L_RAPID_FLIPPING_OFF)
+  self:RefreshPercentage()
+  self.RapidSold:SetText(config.Get(options.FLIPPING_DAILY_SOLD))
+  self.RapidSpend:SetText(config.Get(options.FLIPPING_MAX_SPEND) / 10000)
+  self.RapidKey:SetShortcut(config.Get(options.RAPID_BUY_KEY))
+  self.RapidSkipKey:SetShortcut(config.Get(options.RAPID_SKIP_KEY))
+end
+
+function PointBlankSniperTabFrameMixin:RefreshPercentage()
+  local config, options = PointBlankSniper.Config, PointBlankSniper.Config.Options
+  local flipping = config.Get(options.FLIPPING)
+  self.PercentageLabel:SetText(flipping and POINT_BLANK_SNIPER_L_FLIPPING_PERCENT_LABEL or POINT_BLANK_SNIPER_L_PERCENTAGE_COLON)
+  self.Percentage:SetText(flipping and config.Get(options.FLIPPING_PERCENT) or config.Get(options.PERCENTAGE) * 100)
+end
+
+function PointBlankSniperTabFrameMixin:SavePercentage()
+  if PointBlankSniper.Config.Get(PointBlankSniper.Config.Options.FLIPPING) then
+    self:SaveFlippingControls()
+  else
+    local value = tonumber(self.Percentage:GetText())
+    if not value or value < 0 or value >= math.huge then self:RefreshPercentage(); return end
+    if ChangeCheck(PointBlankSniper.Config.Options.PERCENTAGE, value / 100) then self:Stop() end
+  end
+end
+
+function PointBlankSniperTabFrameMixin:SaveFlippingControls()
+  if self.Buy.pendingAuctionID or self.Buy.buyCommodity then
+    self:RefreshFlippingControls()
+    return
+  end
+  local config, options = PointBlankSniper.Config, PointBlankSniper.Config.Options
+  local previousSignature = FlippingSignature()
+  local newFlipping = not not self.RapidFlipping:GetChecked()
+  local modeChanged = newFlipping ~= not not config.Get(options.FLIPPING)
+  local percent = modeChanged and config.Get(options.FLIPPING_PERCENT) or tonumber(self.Percentage:GetText())
+  local sold, spend = tonumber(self.RapidSold:GetText()), tonumber(self.RapidSpend:GetText())
+  if not percent or percent < 0 or percent >= math.huge or not sold or sold < 0 or sold >= math.huge or not spend or spend < 0 or spend >= 100000000000 then
+    self:RefreshFlippingControls()
+    return
+  end
+  config.Set(options.FLIPPING, newFlipping)
+  if newFlipping then config.Set(options.FLIPPING_PERCENT, percent) end
+  config.Set(options.FLIPPING_DAILY_SOLD, sold)
+  config.Set(options.FLIPPING_MAX_SPEND, math.floor(spend * 10000))
+  self.RapidFlippingLabel:SetText(config.Get(options.FLIPPING) and POINT_BLANK_SNIPER_L_RAPID_FLIPPING_ON or POINT_BLANK_SNIPER_L_RAPID_FLIPPING_OFF)
+  if modeChanged then self:RefreshPercentage() end
+  local signature = FlippingSignature()
+  if signature ~= previousSignature then
+    self:Stop()
+    self.DataProvider:Reset()
+    self.Alert:Reset()
+    self.Buy:Hide()
+    PointBlankSniper.PriceCheck.Flipping.NewPass()
+    self.flippingSignature = signature
+    if self:IsShown() and self.StartButton:IsEnabled() then self:Start() end
+  end
+  if self.Buy:IsShown() then self.Buy:ApplyRapidBinding() end
+end
+
+function PointBlankSniperTabFrameMixin:AdvancePurchased(itemKey)
+  local key = Auctionator.Utilities.ItemKeyString(itemKey)
+  local results = self.DataProvider.results or {}
+  for index, result in ipairs(results) do
+    if Auctionator.Utilities.ItemKeyString(result.itemKey) == key then
+      table.remove(results, index)
+      self.DataProvider:SetDirty()
+      local nextResult = results[index]
+      if nextResult then
+        Auctionator.EventBus:Fire(self, PointBlankSniper.Events.OpenBuyView, {
+          itemKey = nextResult.itemKey, price = nextResult.minPrice,
+          quantity = nextResult.totalQuantity, comparisonPrice = nextResult.comparisonPrice,
+          flippingManualMax = nextResult.flippingManualMax, rawSearchTermInfo = nextResult.rawSearchTermInfo,
+        })
+      else
+        self.Buy:Hide()
+        self.Status:SetText(POINT_BLANK_SNIPER_L_RAPID_COMPLETE)
+      end
+      return
+    end
+  end
+  self.Buy:Hide()
+  self.Status:SetText(POINT_BLANK_SNIPER_L_RAPID_COMPLETE)
 end
 
 function PointBlankSniperTabFrameMixin:OnHide()
@@ -156,6 +289,15 @@ end
 function PointBlankSniperTabFrameMixin:Start()
   self.ScannerKeyCache:Stop()
   self.ScannerNameCache:Stop()
+
+  if PointBlankSniper.PriceCheck.Flipping.Enabled() then
+    if not PointBlankSniper.PriceCheck.Flipping.Available() then
+      self.Status:SetText(POINT_BLANK_SNIPER_L_FLIPPING_TSM_MISSING)
+      PointBlankSniper.Utilities.Message(POINT_BLANK_SNIPER_L_FLIPPING_TSM_MISSING)
+      return
+    end
+    PointBlankSniper.PriceCheck.Flipping.NewPass()
+  end
 
   if PointBlankSniper.Config.Get(PointBlankSniper.Config.Options.SCAN_MODE) == PointBlankSniper.Constants.ScanModes.Blank then
     self.Scanner = self.ScannerNameCache
@@ -184,6 +326,20 @@ function PointBlankSniperTabFrameMixin:Start()
 end
 
 function PointBlankSniperTabFrameMixin:OnUpdate()
+  local debugMode = PointBlankSniper.Config.Get(PointBlankSniper.Config.Options.DEBUG_FAKE_BUY)
+  if self.lastDebugMode ~= debugMode and not self.Buy.pendingAuctionID and not self.Buy.buyCommodity then
+    self.lastDebugMode = debugMode
+    if self.Buy:IsShown() then self.Buy:UpdateBuyState() end
+  end
+  local signature = FlippingSignature()
+  if self.flippingSignature and self.flippingSignature ~= signature then
+    self:Stop()
+    self.DataProvider:Reset()
+    self.Buy:Hide()
+    PointBlankSniper.PriceCheck.Flipping.NewPass()
+    self:RefreshFlippingControls()
+  end
+  self.flippingSignature = signature
   self:UpdateConfigs()
   self:UpdateKeysSearchDialog()
   self:UpdateStartButton()
@@ -214,6 +370,7 @@ function PointBlankSniperTabFrameMixin:ReceiveEvent(eventName, ...)
         price = results[1].minPrice,
         quantity = results[1].totalQuantity,
         comparisonPrice = results[1].comparisonPrice,
+        flippingManualMax = results[1].flippingManualMax,
         rawSearchTermInfo = results[1].rawSearchTermInfo
       })
     end
@@ -231,6 +388,7 @@ function PointBlankSniperTabFrameMixin:ReceiveEvent(eventName, ...)
           price = results[1].minPrice,
           quantity = results[1].totalQuantity,
           comparisonPrice = results[1].comparisonPrice,
+          flippingManualMax = results[1].flippingManualMax,
           rawSearchTermInfo = results[1].rawSearchTermInfo
         })
       end

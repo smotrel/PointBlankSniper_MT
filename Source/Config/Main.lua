@@ -12,6 +12,13 @@ PointBlankSniper.Config.Options = {
   SHOW_NEW_ITEMS_MESSAGES = "show_new_items_messages_2",
   KEYS_SEARCH = "keys_search_2",
   COLUMNS = "columns",
+  FLIPPING = "flipping_enabled",
+  FLIPPING_PERCENT = "flipping_percent",
+  FLIPPING_DAILY_SOLD = "flipping_daily_sold",
+  FLIPPING_MAX_SPEND = "flipping_max_spend_copper",
+  RAPID_BUY_KEY = "rapid_buy_key",
+  RAPID_SKIP_KEY = "rapid_skip_key",
+  DEBUG_FAKE_BUY = "debug_fake_buy",
 }
 
 PointBlankSniper.Config.Defaults = {
@@ -28,6 +35,13 @@ PointBlankSniper.Config.Defaults = {
   [PointBlankSniper.Config.Options.SCAN_MODE] = PointBlankSniper.Constants.ScanModes.Blank,
   [PointBlankSniper.Config.Options.KEYS_SEARCH] = false,
   [PointBlankSniper.Config.Options.COLUMNS] = {},
+  [PointBlankSniper.Config.Options.FLIPPING] = false,
+  [PointBlankSniper.Config.Options.FLIPPING_PERCENT] = 40,
+  [PointBlankSniper.Config.Options.FLIPPING_DAILY_SOLD] = 0.02,
+  [PointBlankSniper.Config.Options.FLIPPING_MAX_SPEND] = 0,
+  [PointBlankSniper.Config.Options.RAPID_BUY_KEY] = "",
+  [PointBlankSniper.Config.Options.RAPID_SKIP_KEY] = "",
+  [PointBlankSniper.Config.Options.DEBUG_FAKE_BUY] = false,
 }
 
 function PointBlankSniper.Config.IsValidOption(name)

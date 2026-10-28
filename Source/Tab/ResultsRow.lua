@@ -19,6 +19,7 @@ function PointBlankSniperResultsRowMixin:OnClick(button, ...)
         price = self.rowData.minPrice,
         quantity = self.rowData.totalQuantity,
         comparisonPrice = self.rowData.comparisonPrice,
+        flippingManualMax = self.rowData.flippingManualMax,
         rawSearchTermInfo = self.rowData.rawSearchTermInfo,
       })
       :UnregisterSource(self)

@@ -91,12 +91,16 @@
         </Anchors>
       </Frame>
 
+      <Frame inherits="AuctionatorConfigurationCheckbox" parentKey="FakeBuy">
+        <KeyValues><KeyValue key="labelText" value="POINT_BLANK_SNIPER_L_DEBUG_FAKE_BUY" type="global" /></KeyValues>
+        <Anchors><Anchor point="TOPLEFT" relativeKey="$parent.ShowNewItemsMessages" relativePoint="BOTTOMLEFT" /></Anchors>
+      </Frame>
       <Frame inherits="AuctionatorConfigurationHeadingFrame" parentKey="UtilitiesHeading">
         <KeyValues>
           <KeyValue key="headingText" value="POINT_BLANK_SNIPER_L_CONFIG_UTILITIES" type="global"/>
         </KeyValues>
         <Anchors>
-          <Anchor point="TOPLEFT" relativeKey="$parent.ShowNewItemsMessages" relativePoint="BOTTOMLEFT"/>
+          <Anchor point="TOPLEFT" relativeKey="$parent.FakeBuy" relativePoint="BOTTOMLEFT"/>
         </Anchors>
       </Frame>
 

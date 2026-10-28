@@ -25,6 +25,7 @@ end
 
 function PointBlankSniperListScannerKeyCacheMixin:SetList(listName)
   self.listName = listName
+  self.keysToSearchFor = {}
   if PointBlankSniper.ItemKeyCache.State.orderedKeys == nil or #PointBlankSniper.ItemKeyCache.State.orderedKeys.names == 0 then
     PointBlankSniper.Utilities.Message(POINT_BLANK_SNIPER_L_NOT_STARTING_SCAN_NO_INFO)
     return
@@ -52,6 +53,11 @@ function PointBlankSniperListScannerKeyCacheMixin:SetList(listName)
     end
 
     check = check and (not self.keyFilter or self.keyFilter(itemKey))
+
+    if check and PointBlankSniper.PriceCheck.Flipping.Enabled() then
+      local keyString = Auctionator.Utilities.ItemKeyString(PointBlankSniper.Utilities.CleanItemKey(itemKey))
+      check = PointBlankSniper.PriceCheck.Flipping.Check(itemKey, nil, self.keysToPrice[keyString])
+    end
 
     if check then
       table.insert(self.keysToSearchFor, itemKey)
@@ -109,14 +115,22 @@ function PointBlankSniperListScannerKeyCacheMixin:ScanItemKeyResults(results)
       local check = true
       local keyString = Auctionator.Utilities.ItemKeyString(PointBlankSniper.Utilities.CleanItemKey(currentResult.itemKey))
       local price = self.keysToPrice[keyString]
-      if price == nil then
+      if PointBlankSniper.PriceCheck.Flipping.Enabled() then
+        local ok, _, maximum, reference, sold, fraction = PointBlankSniper.PriceCheck.Flipping.Check(currentResult.itemKey, currentResult.minPrice, price)
+        check = ok
+        currentResult.flippingManualMax = price
+        currentResult.regionSaleAvg = reference
+        currentResult.regionSoldPerDay = sold
+        currentResult.regionPricePercent = fraction and fraction * 100
+        currentResult.comparisonPrice = maximum
+      elseif price == nil then
         check = check and self.priceCheck:CheckResult(currentResult.minPrice, currentResult.itemKey)
       else
         check = check and currentResult.minPrice <= price
       end
 
       if check then
-        currentResult.comparisonPrice = price
+        if not PointBlankSniper.PriceCheck.Flipping.Enabled() then currentResult.comparisonPrice = price end
         currentResult.rawSearchTermInfo = {searchTerm = self.keysToRaw[keyString], listName = self.listName}
         table.insert(self.results, currentResult)
       end
@@ -125,6 +139,7 @@ function PointBlankSniperListScannerKeyCacheMixin:ScanItemKeyResults(results)
 end
 
 function PointBlankSniperListScannerKeyCacheMixin:ProcessResults(results)
+  if self.cancelled then return end
   self:ScanItemKeyResults(results)
 
   if self.keyStartingIndex > #self.keysToSearchFor then

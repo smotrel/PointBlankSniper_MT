@@ -34,6 +34,7 @@ function PointBlankSniperConfigBasicOptionsFrameMixin:OnShow()
 
   self.ShowNewItemsMessages:SetChecked(PointBlankSniper.Config.Get(PointBlankSniper.Config.Options.SHOW_NEW_ITEMS_MESSAGES))
   self.KeysSearch:SetChecked(PointBlankSniper.Config.Get(PointBlankSniper.Config.Options.KEYS_SEARCH))
+  self.FakeBuy:SetChecked(PointBlankSniper.Config.Get(PointBlankSniper.Config.Options.DEBUG_FAKE_BUY))
 
   local listNames = {}
   for i = 1, Auctionator.Shopping.ListManager:GetCount() do
@@ -102,6 +103,7 @@ function PointBlankSniperConfigBasicOptionsFrameMixin:Save()
 
   PointBlankSniper.Config.Set(PointBlankSniper.Config.Options.SHOW_NEW_ITEMS_MESSAGES, self.ShowNewItemsMessages:GetChecked())
   PointBlankSniper.Config.Set(PointBlankSniper.Config.Options.KEYS_SEARCH, self.KeysSearch:GetChecked())
+  PointBlankSniper.Config.Set(PointBlankSniper.Config.Options.DEBUG_FAKE_BUY, not not self.FakeBuy:GetChecked())
 end
 
 function PointBlankSniperConfigBasicOptionsFrameMixin:Cancel()

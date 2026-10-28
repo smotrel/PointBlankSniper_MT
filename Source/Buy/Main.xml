@@ -15,12 +15,13 @@
     <Scripts>
       <OnLoad method="OnLoad"/>
       <OnEvent method="OnEvent"/>
+      <OnShow method="OnShow"/>
       <OnHide method="OnHide"/>
     </Scripts>
     <Frames>
       <Frame parentKey="Icon" inherits="PointBlankSniperItemIconTemplate">
         <Anchors>
-          <Anchor point="TOPLEFT" x="20" y="-40"/>
+          <Anchor point="TOPLEFT" x="20" y="-10"/>
           <Anchor point="RIGHT" x="-20"/>
         </Anchors>
       </Frame>
@@ -29,15 +30,15 @@
       <Layer>
         <FontString parentKey="Price" inherits="GameFontHighlightMedium">
           <Anchors>
-            <Anchor point="TOPLEFT" x="40" y="-120" />
+            <Anchor point="TOPLEFT" x="40" y="-68" />
           </Anchors>
         </FontString>
       </Layer>
     </Layers>
     <Frames>
-      <Button parentKey="BuyButton" inherits="UIPanelDynamicResizeButtonTemplate">
+      <Button name="PointBlankSniperRapidBuyButton" parentKey="BuyButton" inherits="UIPanelDynamicResizeButtonTemplate">
         <Anchors>
-          <Anchor point="TOPLEFT" x="40" y="-150" />
+          <Anchor point="TOPLEFT" x="40" y="-90" />
           <Anchor point="RIGHT" x="-20" />
         </Anchors>
         <Scripts>
@@ -46,9 +47,16 @@
           </OnClick>
         </Scripts>
       </Button>
+      <Button name="PointBlankSniperRapidSkipButton" parentKey="SkipButton" text="POINT_BLANK_SNIPER_L_SKIP_RESULT" inherits="UIPanelDynamicResizeButtonTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeKey="$parent.BuyButton" y="-3" />
+          <Anchor point="RIGHT" x="-20" />
+        </Anchors>
+        <Scripts><OnClick>self:GetParent():SkipResult()</OnClick></Scripts>
+      </Button>
       <Button parentKey="NormalSearch" text="POINT_BLANK_SNIPER_L_BLIZZARD_BUY_UI" inherits="UIPanelDynamicResizeButtonTemplate">
         <Anchors>
-          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeKey="$parent.BuyButton" y="-10" />
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeKey="$parent.SkipButton" y="-3" />
           <Anchor point="RIGHT" x="-20" />
         </Anchors>
         <Scripts>
@@ -59,7 +67,7 @@
       </Button>
       <Button parentKey="NameSearchButton" text="POINT_BLANK_SNIPER_L_NAME_SEARCH" inherits="UIPanelDynamicResizeButtonTemplate">
         <Anchors>
-          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeKey="$parent.NormalSearch" y="-10" />
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeKey="$parent.NormalSearch" y="-3" />
           <Anchor point="RIGHT" x="-20" />
         </Anchors>
         <Scripts>
@@ -69,20 +77,10 @@
         </Scripts>
       </Button>
     </Frames>
-    <Layers>
-      <Layer>
-        <FontString parentKey="SearchTerm" inherits="GameFontHighlight" wordwrap="false">
-          <Anchors>
-            <Anchor point="BOTTOMLEFT" x="40" y="60" />
-            <Anchor point="RIGHT" x="-10" />
-          </Anchors>
-        </FontString>
-      </Layer>
-    </Layers>
     <Frames>
       <Button parentKey="RemoveSearchTermButton" text="POINT_BLANK_SNIPER_L_REMOVE_SEARCH_TERM" inherits="UIPanelDynamicResizeButtonTemplate">
         <Anchors>
-          <Anchor point="BOTTOMLEFT" x="40" y="20" />
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeKey="$parent.NameSearchButton" y="-3" />
           <Anchor point="RIGHT" x="-20" />
         </Anchors>
         <Scripts>
@@ -92,5 +90,15 @@
         </Scripts>
       </Button>
     </Frames>
+    <Layers>
+      <Layer>
+        <FontString parentKey="SearchTerm" inherits="GameFontHighlight" wordwrap="false">
+          <Anchors>
+            <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeKey="$parent.RemoveSearchTermButton" y="-4" />
+            <Anchor point="RIGHT" x="-10" />
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
   </Frame>
 </Ui>

@@ -36,6 +36,7 @@ local sortPrice = {
 }
 
 function PointBlankSniperListScannerNameCacheMixin:Start()
+  self.generation = (self.generation or 0) + 1
   if not self.registered then
     FrameUtil.RegisterFrameForEvents(self, {
       "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED",
@@ -73,6 +74,7 @@ end
 -- Processes each batch of results, saving the names in advance before
 -- submitting them to another function to do the query on them
 function PointBlankSniperListScannerNameCacheMixin:CacheAndProcessSearchResults(addedResults)
+  local generation = self.generation
   local resultsInfo = {
     cache = {},
     names = {},
@@ -91,6 +93,7 @@ function PointBlankSniperListScannerNameCacheMixin:CacheAndProcessSearchResults(
       local index = #resultsInfo.cache
       table.insert(resultsInfo.names, "")
       Auctionator.AH.GetItemKeyInfo(result.itemKey, function(itemKeyInfo, wasCached)
+        if self.cancelled or generation ~= self.generation or resultsInfo.announcedReady then return end
         resultsInfo.namesWaiting = resultsInfo.namesWaiting - 1
         resultsInfo.names[index] = CleanSearchString(itemKeyInfo.itemName)
         if resultsInfo.namesWaiting == 0 then
@@ -116,10 +119,11 @@ function PointBlankSniperListScannerNameCacheMixin:CacheAndProcessSearchResults(
     self:ProcessCachedResults(resultsInfo)
   elseif not resultsInfo.announcedReady then
     C_Timer.After(0.2, function()
+      if self.cancelled or generation ~= self.generation or resultsInfo.announcedReady then return end
       if resultsInfo.namesWaiting > 0 then
         resultsInfo.missing = true
 
-        self.announcedReady = true
+        resultsInfo.announcedReady = true
         resultsInfo.namesWaiting = 0
         self.blankSearchResultsWaiting = self.blankSearchResultsWaiting - 1
 
@@ -139,13 +143,18 @@ function PointBlankSniperListScannerNameCacheMixin:DoShoppingListSearch(resultsI
   local nameCache = resultsInfo.names
   local GetStartingIndex = PointBlankSniper.Utilities.GetStartingIndex
   local IsBlacklistedID = PointBlankSniper.Utilities.IsBlacklistedID
+  local flipping = PointBlankSniper.PriceCheck.Flipping.Enabled()
+  local matches = {}
   for _, search in ipairs(self.searchFor) do
     local searchString = search.searchString
     local index = GetStartingIndex(1, #nameCache, nameCache, searchString)
     while index <= #nameCache and strFind(nameCache[index], searchString, 1, true) ~= nil do
       local currentResult = resultsInfo.cache[index]
       local check = true
-      if not search.price then
+      if flipping then
+        -- Evaluate after collecting all matching terms, so a broad match cannot
+        -- bypass a lower manual limit on another matching term.
+      elseif not search.price then
         check = check and self.priceCheck:CheckResult(currentResult.minPrice, currentResult.itemKey)
       else
         check = check and currentResult.minPrice <= search.price
@@ -169,13 +178,37 @@ function PointBlankSniperListScannerNameCacheMixin:DoShoppingListSearch(resultsI
       check = check and not IsBlacklistedID(currentResult.itemKey.itemID)
 
       if check then
-        if tIndexOf(self.results, currentResult) == nil then
+        if flipping then
+          local match = matches[currentResult]
+          if not match then
+            match = {raw = search.rawSearchTerm}
+            matches[currentResult] = match
+          end
+          if search.price ~= nil and (match.price == nil or search.price < match.price) then
+            match.price = search.price
+            match.raw = search.rawSearchTerm
+          end
+        elseif tIndexOf(self.results, currentResult) == nil then
           currentResult.comparisonPrice = search.price
           currentResult.rawSearchTermInfo = {searchTerm = search.rawSearchTerm, listName = self.listName}
           table.insert(self.results, currentResult)
         end
       end
       index = index + 1
+    end
+  end
+  if flipping then
+    for currentResult, match in pairs(matches) do
+      local ok, _, maximum, reference, sold, fraction = PointBlankSniper.PriceCheck.Flipping.Check(currentResult.itemKey, currentResult.minPrice, match.price)
+      if ok and tIndexOf(self.results, currentResult) == nil then
+        currentResult.flippingManualMax = match.price
+        currentResult.comparisonPrice = maximum
+        currentResult.regionSaleAvg = reference
+        currentResult.regionSoldPerDay = sold
+        currentResult.regionPricePercent = fraction and fraction * 100
+        currentResult.rawSearchTermInfo = {searchTerm = match.raw, listName = self.listName}
+        table.insert(self.results, currentResult)
+      end
     end
   end
 end
@@ -233,6 +266,7 @@ function PointBlankSniperListScannerNameCacheMixin:ProcessCachedResults(resultsI
 end
 
 function PointBlankSniperListScannerNameCacheMixin:Stop()
+  self.generation = (self.generation or 0) + 1
   if self.registered then
     FrameUtil.UnregisterFrameForEvents(self, {
       "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED",

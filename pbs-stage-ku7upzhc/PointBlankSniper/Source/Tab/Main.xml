@@ -1,0 +1,267 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+  <Frame
+    name="PointBlankSniperTabFrameTemplate"
+    mixin="PointBlankSniperTabFrameMixin"
+    virtual="true"
+    parentKey="PointBlankSniperTabFrame"
+    hidden="true"
+  >
+    <Anchors>
+      <Anchor point="TOP" y="-60"/>
+      <Anchor point="LEFT" x="4"/>
+      <Anchor point="BOTTOMRIGHT" x="-4"/>
+    </Anchors>
+    <Scripts>
+      <OnLoad method="OnLoad"/>
+      <OnUpdate method="OnUpdate"/>
+      <OnShow method="OnShow"/>
+      <OnHide method="OnHide"/>
+    </Scripts>
+    <Frames>
+      <CheckButton parentKey="RapidFlipping" inherits="UICheckButtonTemplate">
+        <Size x="24" y="24"/><Anchors><Anchor point="TOPLEFT" x="20" y="-125"/></Anchors>
+        <Scripts><OnClick>self:GetParent():SaveFlippingControls()</OnClick></Scripts>
+      </CheckButton>
+      <EditBox parentKey="RapidPercent" inherits="InputBoxTemplate" autoFocus="false">
+        <Size x="48" y="20"/><Anchors><Anchor point="TOPLEFT" x="165" y="-128"/></Anchors>
+        <Scripts><OnEnterPressed>self:GetParent():SaveFlippingControls(); self:ClearFocus()</OnEnterPressed><OnEscapePressed>self:ClearFocus()</OnEscapePressed></Scripts>
+      </EditBox>
+      <EditBox parentKey="RapidSold" inherits="InputBoxTemplate" autoFocus="false">
+        <Size x="55" y="20"/><Anchors><Anchor point="TOPLEFT" x="290" y="-128"/></Anchors>
+        <Scripts><OnEnterPressed>self:GetParent():SaveFlippingControls(); self:ClearFocus()</OnEnterPressed><OnEscapePressed>self:ClearFocus()</OnEscapePressed></Scripts>
+      </EditBox>
+      <EditBox parentKey="RapidSpend" inherits="InputBoxTemplate" autoFocus="false">
+        <Size x="68" y="20"/><Anchors><Anchor point="TOPLEFT" x="435" y="-128"/></Anchors>
+        <Scripts><OnEnterPressed>self:GetParent():SaveFlippingControls(); self:ClearFocus()</OnEnterPressed><OnEscapePressed>self:ClearFocus()</OnEscapePressed></Scripts>
+      </EditBox>
+      <EditBox parentKey="RapidKey" inherits="InputBoxTemplate" autoFocus="false">
+        <Size x="150" y="20"/><Anchors><Anchor point="TOPLEFT" x="555" y="-80"/></Anchors>
+        <Scripts><OnEnterPressed>self:GetParent():SaveFlippingControls(); self:ClearFocus()</OnEnterPressed><OnEscapePressed>self:ClearFocus()</OnEscapePressed></Scripts>
+      </EditBox>
+      <Frame parentKey="ScannerNameCache" inherits="PointBlankSniperListScannerNameCacheTemplate"/>
+      <Frame parentKey="ScannerKeyCache" inherits="PointBlankSniperListScannerKeyCacheTemplate"/>
+
+      <Button parentKey="StartButton" inherits="UIPanelDynamicResizeButtonTemplate" text="POINT_BLANK_SNIPER_L_START">
+        <Size x="70" y="22"/>
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" y="20" x="180"/>
+        </Anchors>
+        <Scripts>
+          <OnClick>self:GetParent():StartButtonClicked()</OnClick>
+        </Scripts>
+      </Button>
+      <Button parentKey="StopButton" inherits="UIPanelDynamicResizeButtonTemplate" text="POINT_BLANK_SNIPER_L_STOP">
+        <Size x="70" y="22"/>
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeKey="$parent.StartButton" x="20"/>
+        </Anchors>
+        <Scripts>
+          <OnClick>self:GetParent():Stop()</OnClick>
+        </Scripts>
+      </Button>
+    </Frames>
+    <Layers>
+      <Layer level="BACKGROUND">
+        <FontString parentKey="ShoppingListNameLabel" inherits="GameFontHighlight" text="POINT_BLANK_SNIPER_L_SHOPPING_LIST_COLON">
+          <Anchors>
+            <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeKey="$parent.StopButton" x="40" y="-4"/>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Frames>
+      <Frame inherits="AuctionatorDropDown" parentKey="ListName">
+        <KeyValues>
+          <KeyValue key="labelText" value="" type="string" />
+        </KeyValues>
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeKey="$parent.ShoppingListNameLabel" relativePoint="TOPRIGHT" y="8"/>
+        </Anchors>
+      </Frame>
+
+      <Button inherits="UIPanelDynamicResizeButtonTemplate" text="OPTIONS" parentKey="OptionsButton">
+        <Anchors>
+          <Anchor point="TOPRIGHT" x="-20" y="20"/>
+        </Anchors>
+        <Scripts>
+          <OnClick>self:GetParent():OpenOptions()</OnClick>
+        </Scripts>
+      </Button>
+    </Frames>
+    <Layers>
+      <Layer level="BACKGROUND">
+        <FontString parentKey="PriceSourceLabel" inherits="GameFontHighlight" text="POINT_BLANK_SNIPER_L_PRICE_SOURCE_COLON">
+          <Anchors>
+            <Anchor point="TOPLEFT" x="25" y="-30"/>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Frames>
+      <Frame inherits="AuctionatorDropDown" parentKey="PriceSource">
+       <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeKey="$parent.PriceSourceLabel" y="8" x="-10"/>
+       </Anchors>
+      </Frame>
+    </Frames>
+    <Layers>
+      <Layer level="BACKGROUND">
+        <FontString parentKey="PercentageLabel" inherits="GameFontHighlight" text="POINT_BLANK_SNIPER_L_PERCENTAGE_COLON">
+          <Anchors>
+            <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeKey="$parent.PriceSource.DropDown" x="10" y="-8"/>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Frames>
+      <EditBox autoFocus="false" numeric="true" inherits="InputBoxTemplate" parentKey="Percentage">
+        <Size x="70" y="20" />
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeKey="$parent.PercentageLabel" x="10" y="4"/>
+        </Anchors>
+        <Scripts>
+          <OnEscapePressed>self:ClearFocus()</OnEscapePressed>
+          <OnEnterPressed>Auctionator.Components.ReportEnterPressed()</OnEnterPressed>
+        </Scripts>
+      </EditBox>
+    </Frames>
+    <Layers>
+      <Layer level="BACKGROUND">
+        <FontString parentKey="FilterKeySelectorLabel" inherits="GameFontHighlight" text="POINT_BLANK_SNIPER_L_ITEM_CLASS_COLON">
+          <Anchors>
+            <Anchor point="TOPLEFT" x="25" y="-80"/>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Frames>
+
+      <Frame parentKey="FilterKeySelector" inherits="AuctionatorFilterKeySelectorTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeKey="$parent.FilterKeySelectorLabel" y="8" x="-10"/>
+        </Anchors>
+      </Frame>
+
+      <Frame inherits="AuctionatorConfigurationRadioButtonGroup" parentKey="ScanMode">
+        <KeyValues>
+          <KeyValue key="groupHeadingText" value="POINT_BLANK_SNIPER_L_SCAN_MODE_TEXT" type="global"/>
+          <KeyValue key="selectedValue" value="1" type="global"/>
+        </KeyValues>
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeKey="$parent.Percentage" relativePoint="TOPRIGHT" y="3"/>
+        </Anchors>
+        <Frames>
+          <Frame inherits="AuctionatorConfigurationRadioButton">
+            <Anchors>
+              <Anchor point="RIGHT" x="-20"/>
+            </Anchors>
+            <KeyValues>
+              <KeyValue key="labelText" value="POINT_BLANK_SNIPER_L_BLANK_MODE_TEXT" type="global"/>
+              <KeyValue key="value" value="1" type="number"/>
+            </KeyValues>
+          </Frame>
+          <Frame inherits="AuctionatorConfigurationRadioButton">
+            <Anchors>
+              <Anchor point="TOPRIGHT" x="-20" y="30" />
+            </Anchors>
+            <KeyValues>
+              <KeyValue key="labelText" value="POINT_BLANK_SNIPER_L_KEYS_MODE_TEXT" type="global"/>
+              <KeyValue key="value" value="2" type="number"/>
+            </KeyValues>
+          </Frame>
+          <Frame inherits="AuctionatorConfigurationRadioButton">
+            <Anchors>
+              <Anchor point="TOPRIGHT" x="-20" y="30" />
+            </Anchors>
+            <KeyValues>
+              <KeyValue key="labelText" value="POINT_BLANK_SNIPER_L_NO_GEAR_MODE_TEXT" type="global"/>
+              <KeyValue key="value" value="3" type="number"/>
+            </KeyValues>
+          </Frame>
+          <Frame inherits="AuctionatorConfigurationRadioButton">
+            <Anchors>
+              <Anchor point="RIGHT" x="-20"/>
+            </Anchors>
+            <KeyValues>
+              <KeyValue key="labelText" value="POINT_BLANK_SNIPER_L_THRESHOLD_MODE_TEXT" type="global"/>
+              <KeyValue key="value" value="4" type="number"/>
+            </KeyValues>
+          </Frame>
+        </Frames>
+      </Frame>
+
+
+      <Frame parentKey="DataProvider" mixin="PointBlankSniperDataProviderMixin">
+        <Scripts>
+          <OnLoad method="OnLoad"/>
+          <OnUpdate method="OnUpdate"/>
+        </Scripts>
+      </Frame>
+      <Frame parentKey="ResultsListing" inherits="AuctionatorResultsListingTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" x="20" y="-185"/>
+          <Anchor point="BOTTOMRIGHT" x="-320" y="27"/>
+        </Anchors>
+      </Frame>
+
+      <Frame parentKey="ResultsListingInset" inherits="AuctionatorInsetTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeKey="$parent.ResultsListing" x="-24" y="-25"/>
+          <Anchor point="BOTTOMRIGHT" relativeKey="$parent.ResultsListing"  y="2"/>
+        </Anchors>
+      </Frame>
+      <Frame parentKey="Buy" inherits="PointBlankSniperBuyFrameTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeKey="$parent.ResultsListing" relativePoint="TOPRIGHT" x="20"/>
+          <Anchor point="BOTTOMRIGHT" relativePoint="BOTTOMRIGHT" x="-20" y="27"/>
+        </Anchors>
+      </Frame>
+    </Frames>
+    <Layers>
+      <Layer level="BACKGROUND">
+        <FontString parentKey="RapidFlippingLabel" inherits="GameFontHighlightSmall"><Anchors><Anchor point="LEFT" relativeKey="$parent.RapidFlipping" relativePoint="RIGHT"/></Anchors></FontString>
+        <FontString inherits="GameFontHighlightSmall" text="POINT_BLANK_SNIPER_L_RAPID_PERCENT"><Anchors><Anchor point="BOTTOMLEFT" relativeKey="$parent.RapidPercent" relativePoint="TOPLEFT" y="1"/></Anchors></FontString>
+        <FontString inherits="GameFontHighlightSmall" text="POINT_BLANK_SNIPER_L_RAPID_SOLD"><Anchors><Anchor point="BOTTOMLEFT" relativeKey="$parent.RapidSold" relativePoint="TOPLEFT" y="1"/></Anchors></FontString>
+        <FontString inherits="GameFontHighlightSmall" text="POINT_BLANK_SNIPER_L_RAPID_SPEND"><Anchors><Anchor point="BOTTOMLEFT" relativeKey="$parent.RapidSpend" relativePoint="TOPLEFT" y="1"/></Anchors></FontString>
+        <FontString inherits="GameFontHighlightSmall" text="POINT_BLANK_SNIPER_L_RAPID_BINDING"><Anchors><Anchor point="RIGHT" relativeKey="$parent.RapidKey" relativePoint="LEFT" x="-8"/></Anchors></FontString>
+        <FontString parentKey="Status" inherits="GameFontHighlight">
+          <Anchors>
+            <Anchor point="TOP" relativePoint="BOTTOM" relativeKey="$parent.ResultsListing" y="-4"/>
+            <Anchor point="RIGHT" x="-20"/>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Frames>
+      <Frame parentKey="KeysSearchDialog" frameStrata="DIALOG" hidden="true">
+        <Size x="400" y="90"/>
+        <Anchors>
+          <Anchor point="CENTER"/>
+        </Anchors>
+        <Layers>
+          <Layer level="BACKGROUND">
+            <FontString parentKey="Message" inherits="GameFontHighlight" text="POINT_BLANK_SNIPER_L_KEYS_SEARCH_DIALOG_TEXT">
+              <Anchors>
+                <Anchor point="TOPLEFT" y="-20" x="20"/>
+                <Anchor point="RIGHT" x="-20"/>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Frames>
+          <Button parentKey="EnableButton" inherits="UIPanelDynamicResizeButtonTemplate" text="ENABLE">
+            <Anchors>
+              <Anchor point="CENTER"/>
+              <Anchor point="TOP" relativePoint="BOTTOM" y="-10" relativeKey="$parent.Message"/>
+            </Anchors>
+            <Scripts>
+              <OnClick>self:GetParent():GetParent():EnableKeysSearch()</OnClick>
+            </Scripts>
+          </Button>
+
+          <Frame inherits="DialogBorderTemplate"/>
+        </Frames>
+      </Frame>
+    </Frames>
+  </Frame>
+</Ui>
